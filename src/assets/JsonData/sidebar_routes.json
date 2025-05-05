@@ -9,6 +9,13 @@
         "route": "/customers",
         "icon": "bx bx-user-pin"
     },
+    
+  
+    {
+        "display_name": "categories",
+        "route": "/categories",
+        "icon": "bx bx-list-ol"
+    },
     {
         "display_name": "Products",
         "route": "/products",
@@ -19,26 +26,7 @@
         "route": "/orders",
         "icon": "bx bx-cart"
     },
-    {
-        "display_name": "Analytics",
-        "route": "/analytics",
-        "icon": "bx bx-bar-chart-alt"
-    },
-    {
-        "display_name": "categories",
-        "route": "/categories",
-        "icon": "bx bx-list-ol"
-    },
-    {
-        "display_name": "discount",
-        "route": "/discount",
-        "icon": "bx bx-gift"
-    },
-    {
-        "display_name": "inventory",
-        "route": "/inventory",
-        "icon": "bx bx-store-alt"
-    },
+   
     {
         "display_name": "settings",
         "route": "/settings",

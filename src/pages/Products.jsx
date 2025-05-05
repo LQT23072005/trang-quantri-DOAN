@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Table from '../components/table/Table';
 import { database } from '../components/Firebase/firebaseConfig';
-import { ref, onValue, push, set } from 'firebase/database';
+import { ref, onValue, set, remove } from 'firebase/database';
 
 const customerTableHead = [
     'STT',
@@ -13,29 +13,9 @@ const customerTableHead = [
     'Mô tả',
     'Giá',
     'Đánh giá',
-    'Đề xuất'
+    'Đề xuất',
+    'Hành động'
 ];
-
-const renderHead = (item, index) => <th key={index}>{item}</th>;
-
-const renderBody = (item, index) => (
-    <tr key={index}>
-        <td>{index + 1}</td>
-        <td>{item.id}</td>
-        <td>{item.title}</td>
-        <td>{item.quantity || 0}</td>
-        <td>{item.model?.join(', ')}</td>
-        <td>
-            {item.picUrl?.map((url, idx) => (
-                <img key={idx} src={url} alt="item" style={{ width: '50px', marginRight: '5px' }} />
-            ))}
-        </td>
-        <td>{item.description}</td>
-        <td>{item.price}</td>
-        <td>{item.rating}</td>
-        <td>{item.showRecommended ? 'Có' : 'Không'}</td>
-    </tr>
-);
 
 const Products = () => {
     const [items, setItems] = useState([]);
@@ -58,6 +38,167 @@ const Products = () => {
     const [tempModel, setTempModel] = useState('');
     const [tempPicUrl, setTempPicUrl] = useState('');
 
+    // Hàm render header của bảng
+    const renderHead = (item, index) => <th key={index}>{item}</th>;
+
+    // Hàm render body của bảng (đã được di chuyển vào trong component)
+    const renderBody = (item, index) => (
+        <tr key={index}>
+            <td>{index + 1}</td>
+            <td>{item.id}</td>
+            <td>{item.title}</td>
+            <td>{item.quantity || 0}</td>
+            <td>{item.model?.join(', ')}</td>
+            <td>
+                {item.picUrl?.map((url, idx) => (
+                    <img key={idx} src={url} alt="item" style={{ width: '50px', marginRight: '5px' }} />
+                ))}
+            </td>
+            <td>{item.description}</td>
+            <td>{item.price}</td>
+            <td>{item.rating}</td>
+            <td>{item.showRecommended ? 'Có' : 'Không'}</td>
+            <td>
+                <button 
+                    className="btn-delete" 
+                    onClick={() => handleDeleteProduct(item.id)}
+                >
+                    Xóa
+                </button>
+            </td>
+        </tr>
+    );
+
+    // Hàm xử lý xóa sản phẩm
+    const handleDeleteProduct = (productId) => {
+        if (window.confirm('Bạn có chắc chắn muốn xóa sản phẩm này không?')) {
+            const productRef = ref(database, `Items/${productId}`);
+            
+            remove(productRef)
+                .then(() => {
+                    alert('Xóa sản phẩm thành công!');
+                })
+                .catch(error => {
+                    console.error("Error deleting product: ", error);
+                    alert('Có lỗi xảy ra khi xóa sản phẩm');
+                });
+        }
+    };
+
+    // Hàm thêm sản phẩm mới
+    const handleAddProduct = () => {
+        const maxId = items.reduce((max, item) => {
+            const itemId = parseInt(item.id);
+            return itemId > max ? itemId : max;
+        }, 0);
+        
+        setNewProduct({
+            ...newProduct,
+            id: (maxId + 1).toString(),
+            quantity: 1
+        });
+        setShowAddForm(true);
+    };
+
+    // Hàm xử lý thay đổi input
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setNewProduct({
+            ...newProduct,
+            [name]: value
+        });
+    };
+
+    // Hàm xử lý thay đổi checkbox
+    const handleCheckboxChange = (e) => {
+        const { name, checked } = e.target;
+        setNewProduct({
+            ...newProduct,
+            [name]: checked
+        });
+    };
+
+    // Hàm thêm loại sản phẩm
+    const addModel = () => {
+        if (tempModel.trim()) {
+            setNewProduct({
+                ...newProduct,
+                model: [...newProduct.model, tempModel]
+            });
+            setTempModel('');
+        }
+    };
+
+    // Hàm thêm URL hình ảnh
+    const addPicUrl = () => {
+        if (tempPicUrl.trim()) {
+            setNewProduct({
+                ...newProduct,
+                picUrl: [...newProduct.picUrl, tempPicUrl]
+            });
+            setTempPicUrl('');
+        }
+    };
+
+    // Hàm xóa loại sản phẩm
+    const removeModel = (index) => {
+        const updatedModels = newProduct.model.filter((_, i) => i !== index);
+        setNewProduct({
+            ...newProduct,
+            model: updatedModels
+        });
+    };
+
+    // Hàm xóa URL hình ảnh
+    const removePicUrl = (index) => {
+        const updatedPicUrls = newProduct.picUrl.filter((_, i) => i !== index);
+        setNewProduct({
+            ...newProduct,
+            picUrl: updatedPicUrls
+        });
+    };
+
+    // Hàm submit sản phẩm
+    const submitProduct = (e) => {
+        e.preventDefault();
+        
+        if (!newProduct.title || !newProduct.price || !newProduct.categoryId) {
+            alert('Vui lòng điền đầy đủ thông tin bắt buộc (Tên, Giá, Danh mục)');
+            return;
+        }
+
+        const productToSubmit = {
+            ...newProduct,
+            price: parseFloat(newProduct.price),
+            rating: newProduct.rating ? parseFloat(newProduct.rating) : 0,
+            quantity: parseInt(newProduct.quantity) || 1,
+            categoryId: parseInt(newProduct.categoryId)
+        };
+
+        set(ref(database, `Items/${newProduct.id}`), productToSubmit)
+            .then(() => {
+                alert('Thêm sản phẩm thành công!');
+                setNewProduct({
+                    id: '',
+                    title: '',
+                    model: [],
+                    picUrl: [],
+                    description: '',
+                    price: '',
+                    rating: '',
+                    quantity: 1,
+                    categoryId: '',
+                    showRecommended: false
+                });
+                setShowAddForm(false);
+            })
+            .catch(error => {
+                console.error("Error adding product: ", error);
+                alert('Có lỗi xảy ra khi thêm sản phẩm');
+            });
+    };
+
+    // Effect để load dữ liệu
     useEffect(() => {
         const itemsRef = ref(database, 'Items');
         const categoriesRef = ref(database, 'Category');
@@ -66,7 +207,6 @@ const Products = () => {
             try {
                 const data = snapshot.val();
                 if (data) {
-                    // Chuyển đổi object thành mảng và sắp xếp theo ID số
                     const itemList = Object.entries(data)
                         .map(([key, value]) => ({
                             id: key,
@@ -100,113 +240,6 @@ const Products = () => {
             unsubscribeCategories();
         };
     }, []);
-
-    const handleAddProduct = () => {
-        // Tìm ID tiếp theo (số lớn nhất hiện có + 1)
-        const maxId = items.reduce((max, item) => {
-            const itemId = parseInt(item.id);
-            return itemId > max ? itemId : max;
-        }, 0);
-        
-        setNewProduct({
-            ...newProduct,
-            id: (maxId + 1).toString(),
-            quantity: 1
-        });
-        setShowAddForm(true);
-    };
-
-    const handleInputChange = (e) => {
-        const { name, value } = e.target;
-        setNewProduct({
-            ...newProduct,
-            [name]: value
-        });
-    };
-
-    const handleCheckboxChange = (e) => {
-        const { name, checked } = e.target;
-        setNewProduct({
-            ...newProduct,
-            [name]: checked
-        });
-    };
-
-    const addModel = () => {
-        if (tempModel.trim()) {
-            setNewProduct({
-                ...newProduct,
-                model: [...newProduct.model, tempModel]
-            });
-            setTempModel('');
-        }
-    };
-
-    const addPicUrl = () => {
-        if (tempPicUrl.trim()) {
-            setNewProduct({
-                ...newProduct,
-                picUrl: [...newProduct.picUrl, tempPicUrl]
-            });
-            setTempPicUrl('');
-        }
-    };
-
-    const removeModel = (index) => {
-        const updatedModels = newProduct.model.filter((_, i) => i !== index);
-        setNewProduct({
-            ...newProduct,
-            model: updatedModels
-        });
-    };
-
-    const removePicUrl = (index) => {
-        const updatedPicUrls = newProduct.picUrl.filter((_, i) => i !== index);
-        setNewProduct({
-            ...newProduct,
-            picUrl: updatedPicUrls
-        });
-    };
-
-    const submitProduct = (e) => {
-        e.preventDefault();
-        
-        if (!newProduct.title || !newProduct.price || !newProduct.categoryId) {
-            alert('Vui lòng điền đầy đủ thông tin bắt buộc (Tên, Giá, Danh mục)');
-            return;
-        }
-
-        const productToSubmit = {
-            ...newProduct,
-            price: parseFloat(newProduct.price),
-            rating: newProduct.rating ? parseFloat(newProduct.rating) : 0,
-            quantity: parseInt(newProduct.quantity) || 1,
-            categoryId: parseInt(newProduct.categoryId)
-        };
-
-        // Sử dụng set thay vì push để có thể chỉ định ID
-        set(ref(database, `Items/${newProduct.id}`), productToSubmit)
-            .then(() => {
-                alert('Thêm sản phẩm thành công!');
-                setNewProduct({
-                    id: '',
-                    title: '',
-                    model: [],
-                    picUrl: [],
-                    description: '',
-                    price: '',
-                    rating: '',
-                    quantity: 1,
-                    categoryId: '',
-                    showRecommended: false
-                });
-                setShowAddForm(false);
-            })
-            .catch(error => {
-                console.error("Error adding product: ", error);
-                alert('Có lỗi xảy ra khi thêm sản phẩm');
-            });
-    };
 
     if (loading) return <div>Loading...</div>;
     if (error) return <div>Error: {error}</div>;
@@ -278,7 +311,6 @@ const Products = () => {
                             </select>
                         </div>
 
-                        {/* Các phần khác giữ nguyên */}
                         <div className="form-group">
                             <label>Loại sản phẩm:</label>
                             <div className="input-group">
@@ -391,7 +423,6 @@ const Products = () => {
                 </div>
             </div>
 
-            {/* CSS giữ nguyên */}
             <style jsx>{`
                 .page-header {
                     display: flex;
@@ -400,7 +431,7 @@ const Products = () => {
                     margin-bottom: 20px;
                 }
                 
-                .btn-add {
+                .btn-add_product {
                     background-color: #4CAF50;
                     color: white;
                     padding: 10px 20px;
@@ -410,7 +441,7 @@ const Products = () => {
                     font-size: 16px;
                 }
                 
-                .btn-add:hover {
+                .btn-add_product:hover {
                     background-color: #45a049;
                 }
                 
@@ -519,6 +550,19 @@ const Products = () => {
                     border: none;
                     border-radius: 4px;
                     cursor: pointer;
+                }
+
+                .btn-delete {
+                    background: #f44336;
+                    color: white;
+                    padding: 5px 10px;
+                    border: none;
+                    border-radius: 4px;
+                    cursor: pointer;
+                }
+                
+                .btn-delete:hover {
+                    background: #d32f2f;
                 }
             `}</style>
         </div>

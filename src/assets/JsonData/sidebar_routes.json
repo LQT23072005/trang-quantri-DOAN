@@ -14,7 +14,7 @@
     {
         "display_name": "categories",
         "route": "/categories",
-        "icon": "bx bx-list-ol"
+        "icon": "bx bx-list-ol" 
     },
     {
         "display_name": "Products",
@@ -28,8 +28,9 @@
     },
    
     {
-        "display_name": "settings",
-        "route": "/settings",
-        "icon": "bx bx-cog"
+        "display_name": "Chats",
+        "route": "/chats",
+        "icon": "bx bx-chat"
+
     }
 ]
